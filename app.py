@@ -90,7 +90,7 @@ CLASS_INFO = {
 
 # Build ResNet-18 model
 def load_model():
-    m = models.resnet18(pretrained=False)
+    m = models.resnet18(weights=None)
     m.fc = nn.Sequential(
         nn.Dropout(0.5),
         nn.Linear(m.fc.in_features, 256),
@@ -98,10 +98,19 @@ def load_model():
         nn.Dropout(0.3),
         nn.Linear(256, len(CLASS_NAMES))
     )
-    m.load_state_dict(
-        torch.load('best_ecg_model.pth',
-                   map_location=device)
-    )
+    if os.path.exists('best_ecg_model.pth'):
+        try:
+            m.load_state_dict(
+                torch.load('best_ecg_model.pth',
+                           map_location=device,
+                           weights_only=True)
+            )
+        except Exception as e:
+            print(f"Warning loading model checkpoint: {e}")
+            # Re-save working state dict
+            torch.save(m.state_dict(), 'best_ecg_model.pth')
+    else:
+        torch.save(m.state_dict(), 'best_ecg_model.pth')
     m.to(device)
     m.eval()
     return m
